@@ -1,0 +1,21 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "server",
+            "type": "shell",
+            "command": "./3nv/bin/python3 -m watchgod server.main"
+        },
+        {
+            "label": "stun",
+            "type": "shell",
+            "command": "./3nv/bin/pystun -H localhost -P 3478"
+        },
+        {
+            "label": "test",
+            "dependsOn": ["server", "stun"]
+        }
+    ]
+}

@@ -1,0 +1,4 @@
+watchgod>=0.7
+websockets>=8.1
+pystun>=0.1.0
+# git+https://github.com/jfsanchez91/pystun3.git@py3-support

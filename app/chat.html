@@ -1,0 +1,47 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <title>chat.jnet</title>
+    <link rel="mask-icon" href="./jnet.svg" color="#000">
+    <link rel="shortcut icon" type="image/svg+xml" href="./jnet.svg"/>
+    <link rel='stylesheet' href='./chat.css' type="text/css">
+</head>
+
+<body>
+    <header>
+        <div class='logo'>
+            <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="16mm" height="16mm"
+                viewBox="0 0 16 16" version="1.1">
+                <path d="M 5,1 V 2 H 11 V 1 Z M 2,4 V 5 H 3 V 4 Z m 0,1 H 1 v 6 h 1 z m 0,6 v 1 h 1 v -1 z" />
+            </svg>
+            <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="16mm" height="16mm"
+                viewBox="0 0 16 16" version="1.1">
+                <path d="m 13,4 v 1 l 1,0 V 11 H 15 V 5 h -1 l -0,-1 z m 1,7 h -1 v 1 h 1 z M 5,14 V 15 h 6 v -1 z" />
+            </svg>
+            <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="16mm" height="16mm"
+                viewBox="0 0 16 16" version="1.1">
+                <path d="m 5,4 v 8 h 1 V 4 Z m 0,8 H 4 v 1 H 5 Z M 4,13 H 3 v 1 H 4 Z M 3,14 H 2 V 15 h 1 z" />
+            </svg><svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" width="16mm"
+                height="16mm" viewBox="0 0 16 16" version="1.1">
+                <path
+                    d="m 13,1 v 1 h 1 V 1 Z m 0,1 h -1 v 1 h 1 z m -1,1 h -1 v 8 h 1 z M 11,11 H 10 v 1 h 1 z m -1,0 V 5 H 9 V 11 Z M 9,5 V 4 H 8 V 5 Z M 8,5 H 7 V 12 H 8 Z" />
+            </svg>
+        </div><span class='me' spellcheck='false'></span><b>@chat.jnet</b>
+    </header>
+    <section class='connect'>
+        <input type='text' disabled placeholder='connect-to-id'>
+        <input type='button' disabled value='connect'>
+    </section>
+    <section class='chat'>
+        <!-- <div class='bubble'>
+            * Chat connected. *
+        </div> -->
+    </section>
+    <section class='compose'>
+        <input placeholder='Press return to send a message.'>
+    </section>
+    <script src='./chat.js'></script>
+</body>
+
+</html>

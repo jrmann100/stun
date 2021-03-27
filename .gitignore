@@ -1,2 +1,4 @@
+.DS_Store
 3nv
-*.swp
+.vscode/settings.json
+__pycache__

@@ -50,17 +50,19 @@ async def websocket_main(websocket: websockets.WebSocketServerProtocol, path):
     my_id = snowball()
     clients[my_id] = websocket
 
-    async def send(typ, body, websocket=websocket): await websocket.send(
-        json.dumps({'type': typ, 'body': body}))
+    async def send(typ, body={}, error=None, client=websocket): await client.send(
+        json.dumps({'type': typ, **({'error': error} if error != None else {'body': body})}))
+
+    await send('id', {'id': my_id})
 
     async for text in websocket:
         try:
             msg = json.loads(text)
         except json.decoder.JSONDecodeError:
-            await send('error', 'Request not JSON.')
+            await send('error', error='Request not JSON.')
 
         if not 'type' in msg:
-            await send('error', 'Expected {type, body}.')
+            await send('error', error='Expected {type, body}.')
             continue
 
         typ = msg['type']
@@ -68,20 +70,34 @@ async def websocket_main(websocket: websockets.WebSocketServerProtocol, path):
 
         print('WS   <', *websocket.remote_address, typ)
 
-        async def reply(body): await send(typ, body)
+        async def reply(body={}, error=None): await send(typ, body, error)
 
-        if typ == 'get_id':
-            await reply(my_id)
+        if typ == 'id':
+            await reply({'id': my_id})
+        if typ == 'change_id':
+            # should probably validate
+            if body['id'] in clients:
+                await reply(error='ID {} already taken.'.format(body['id']))
+            else:
+                # This may break ICE!
+                # Todo: need to check and update your_id by tracking live calls.
+                # Alternately, have an index of changed ids.
+                del clients[my_id]
+                my_id = body['id']
+                clients[my_id] = websocket
+                await reply({'id': my_id})
         elif typ == 'ping':
-            await reply('pong')
-        elif typ == 'peer':
-            await reply(bool(body['peer'] in clients))
+            await reply({'ping': 'pong'})
+        elif typ == 'your_id':
+            await reply(bool(body['id'] in clients))
         elif typ in ['offer', 'answer', 'candidate']:
             if body['id'] in clients:
                 # Realistically, we should track live calls, so the proxying only works between approved peers.
-                await send(typ, {**body, 'id': my_id}, clients[body['id']])
+                await send(typ + '_from', {**body, 'id': my_id}, client=clients[body['id']])
+                await reply({'id': body['id']})
             else:
-                await send('signaling_error', 'Signaling error: no client with ID {}.'.format(body['id']))
+                # This shouldn't happen.
+                await send(typ, error='Signaling error: no client with ID {}.'.format(body['id']))
 
     del clients[my_id]
 

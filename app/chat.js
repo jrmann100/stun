@@ -7,12 +7,6 @@ const elements = {
 
 }
 
-const listenOnce = async (target, event) => new Promise((resolve, reject) => {
-    target.addEventListener(event, function (e) {
-        target.removeEventListener(event, arguments.callee);
-        resolve(e);
-    })
-})
 const main = async () => {
     const conn = new RTCPeerConnection({
         'iceServers': [{
@@ -26,7 +20,7 @@ const main = async () => {
     window.server = server; // DEBUG
     window.conn = conn; // DEBUG
 
-    let my_id, your_id;
+    let your_id;
 
     const send = async (type, body) => server.send(JSON.stringify({ 'type': type, 'body': body }));
     const recv = async (type, timeout = 1000) => {
@@ -35,13 +29,10 @@ const main = async () => {
                 const msg = JSON.parse(message.data);
                 if (msg['type'] === type) {
                     server.removeEventListener('message', arguments.callee);
-                    if (msg['body'] && msg['body']['error'])
-                        reject(msg['body']);
+                    if (msg['error'])
+                        reject(msg['error']);
                     else
                         resolve(msg['body']);
-                }
-                if (msg['type'] === 'signaling_error') {
-                    reject(msg['body'])
                 }
             }
             server.addEventListener('message', recvHandler)
@@ -52,12 +43,14 @@ const main = async () => {
         })
     }
 
+    const request = async (type, body, timeout = 1000) => { await send(type, body); return await recv(type, timeout); }
+
     serverOn = (type, callback) => {
         server.addEventListener('message', (message) => {
             const msg = JSON.parse(message.data);
             if (msg['type'] === type) {
-                if (msg['body'] && msg['body']['error'])
-                    throw Error(msg['body']);
+                if (msg['error'])
+                    throw Error(msg['error']);
                 else
                     callback(msg['body']);
             }
@@ -65,11 +58,11 @@ const main = async () => {
     }
 
 
-    serverOn('candidate', async (msg) => await conn.addIceCandidate(msg['candidate']));
+    serverOn('candidate_from', async (msg) => await conn.addIceCandidate(msg['candidate']));
 
     conn.addEventListener('icecandidate', async (ev) => {
         if (ev.candidate) {
-            await send('candidate', { 'candidate': ev.candidate, 'id': your_id })
+            await request('candidate', { 'candidate': ev.candidate, 'id': your_id })
         }
     })
 
@@ -77,22 +70,81 @@ const main = async () => {
 
     conn.addEventListener('datachannel', (ev) => { chan.set(ev.channel); })
 
-    let chan = {
+    const chan = {
         _c: undefined,
         create: function () {
-            this._c = conn.createDataChannel('data-channel', { ordered: true });
-            this._c.binaryType = "arraybuffer";
-            this._c.addEventListener('message', (ev) => new Bubble(ev.data, Bubble.LEFT));
-            return this._c;
+            this.set(conn.createDataChannel('data-channel', { ordered: true }));
         },
         get: function () { return this._c; },
-        set: function (chan) {
+        set: function (chan = this._c) {
             this._c = chan;
-            this._c.addEventListener('open', (ev) => console.log(ev));
             this._c.addEventListener('message', (ev) => new Bubble(ev.data, Bubble.LEFT));
-            this._c.addEventListener('close', (ev) => console.log(ev));
+            this._c.binaryType = "arraybuffer";
+            this._c.addEventListener('open', (ev) => new Bubble(`Connected to ${your_id}.`));
+            this._c.addEventListener('message', (ev) => new Bubble(ev.data, Bubble.LEFT));
+            this._c.addEventListener('close', (ev) => { new Bubble(`Disconnected.`) });
+            // todo: shut down everything on dc close. not as easy as callActive; everything needs to be reset,
+            // including these callbacks - otherwise you'll get 'connected' 10 times.
+            // todo: attempt reconnection?
+            // reconnection would probably involve caching messages on reload or downloading history from peer
         }
     }
+
+
+    const MyID = class {
+        static _ta = elements.me;
+        static _id = '';
+
+        static toString() {
+            return this._id;
+        }
+
+        static get id() {
+            return this._id;
+        }
+
+        static get() {
+            return this._id;
+        }
+
+        static async set(id = this._ta.textContent) {
+            if (!(id === '' || id === this._id)) {
+                try {
+                    this._id = (await request('change_id', { 'id': id }))['id'] === id ? id : _id;
+                    localStorage.setItem('id', this._id);
+                } catch (e) { console.error(`id ${id} already in use.`); } // todo: need in-UI error-handling.
+            }
+            this._show();
+            return this._id;
+        }
+
+        static async _show() {
+            if (this._ta.textContent !== this._id) this._ta.textContent = this._id;
+            if (this._id.length === 0) {
+                this._ta.contentEditable = 'false';
+            } else {
+                this._ta.contentEditable = 'true';
+            }
+            return this._id;
+        }
+
+        static async init() {
+            this._id = (await request('id'))['id'];
+            this._show();
+            if (localStorage.getItem('id')) this.set(localStorage.getItem('id'));
+
+            // todo: should reset unsubmitted change on unfocus
+            this._ta.addEventListener('keydown', async (e) => {
+                if (e.keyCode === 13) {
+                    e.preventDefault();
+                    await this.set()
+
+                }
+            })
+        }
+    }
+
+    window.my_id = MyID; // DEBUG
 
     window.chan = chan; // DEBUG
 
@@ -111,6 +163,7 @@ const main = async () => {
         throw Error('Could not connect to server.');
     }
 
+
     const connectState = (state = true) => {
         if (state) {
             elements.dial.removeAttribute('disabled');
@@ -121,17 +174,11 @@ const main = async () => {
         }
     }
 
-    connectState(false);
-
-    await send('get_id');
-
-    my_id = await recv('get_id');
-    elements.me.textContent = my_id;
-    elements.me.setAttribute('contenteditable', '');
+    await MyID.init()
     connectState(true);
     server.addEventListener('close', () => {
         connectState(false);
-        elements.me.textContent = '';
+        MyID.set('');
     })
 
     let callActive = {
@@ -148,36 +195,48 @@ const main = async () => {
         }
     }
 
-    serverOn('offer', async (msg) => {
+    serverOn('offer_from', async (msg) => {
         if (callActive.get()) return console.warn('Did not ring; another call is active.')
         callActive.set(true);
+
         // if (!confirm('Incoming call from ID ' + msg['id'] + '\nAccept?')) return;
         // todo: approving calls between clients and monitoring on server-side.
         conn.setRemoteDescription(new RTCSessionDescription(msg['offer']));
         your_id = msg['id'];
         const answer = await conn.createAnswer();
         conn.setLocalDescription(answer);
-        await send('answer', { 'answer': answer, 'id': your_id });
+        await request('answer', { 'answer': answer, 'id': your_id });
     });
 
-    serverOn('error', (msg) => { throw Error('Server says: ' + msg); });
+    serverOn('error', (msg) => { console.error(msg); });
+
+    elements.you.addEventListener('keydown', async (ev) => {
+        if (ev.keyCode === 13) elements.dial.click();
+    });
 
     elements.dial.addEventListener('click', async (ev) => {
+        your_id = elements.you.value;
+        // todo: cache this?
+        if (your_id === MyID.id) {
+            throw Error('Please don\'t call yourself.'); // todo: handle all errors in UI.
+        } else if (your_id.length === 0) {
+            throw Error('Empty target id.');
+        }
+
         if (callActive.get()) return console.warn('Did not dial; another call is active.')
         callActive.set(true);
 
         chan.create();
 
         const offer = await conn.createOffer();
-
-        your_id = elements.you.value;
-
-        if (your_id === my_id) {
-            throw Error('Please don\'t call yourself.'); // todo: handle all errors in UI.
+        // todo: handshake
+        try { await request('offer', { 'offer': offer, 'id': your_id }); } catch (e) {
+            if (e.indexOf('no client with ID') !== -1) {
+                console.error(e)
+                callActive.set(false);
+            }
         }
-
-        await send('offer', { 'offer': offer, 'id': your_id });
-        const answer = await recv('answer', 3000);
+        const answer = await recv('answer_from', 3000);
         conn.setLocalDescription(offer);
         conn.setRemoteDescription(new RTCSessionDescription(answer['answer']));
     })

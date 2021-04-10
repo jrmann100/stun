@@ -1,0 +1,21 @@
+{
+  "name": "chat.jnet",
+  "description": "WebRTC communications by Jordan Mann.",
+  "display": "standalone",
+  "start_url": "/static/chat.html",
+  "background_color": "#F0F0F0",
+  "theme_color": "#F0F0F0",
+  "categories": [
+    "utilities",
+    "entertainment",
+    "productivity"
+  ],
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/static/sur.svg",
+      "type": "image/svg+xml",
+      "sizes": "1024x1024"
+    }
+  ]
+}

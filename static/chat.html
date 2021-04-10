@@ -1,11 +1,35 @@
 <!DOCTYPE HTML>
-<html>
+<html lang="en" prefix="og: https://ogp.me/ns#">
 
 <head>
     <title>chat.jnet</title>
-    <link rel="mask-icon" href="./jnet.svg" color="#000">
-    <link rel="shortcut icon" type="image/svg+xml" href="./jnet.svg"/>
-    <link rel='stylesheet' href='./chat.css' type="text/css">
+    <link rel='stylesheet' href='/static/chat.css' type="text/css">
+    <meta charset="utf-8">
+    <meta property="og:title" content="chat.jnet" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jnet.jrmann.com/chat" />
+    <meta property="og:image" content="https://jnet.jrmann.com/static/jnet.svg" />
+    <meta property="og:description" content="WebRTC communications by Jordan Mann.">
+    <meta property="og:locale" content="en_US">
+    <title>Feed</title>
+
+    <link rel="shortcut icon" type="image/svg+xml" href="/static/jnet.svg" />
+    <link rel="mask-icon" href="/static/jnet-mask.svg" color="#000">
+
+    <meta name="theme-color" content="F0F0F0">
+    <meta name="author" content="Jordan Mann">
+    <meta name="description" content="chat.jnet">
+    <meta name="color-scheme" content="dark light">
+
+    <!-- Adding a manifest breaks iOS fullscreen compatibility. -->
+    <link rel="manifest" href="/static/chat.webmanifest">
+
+    <link rel="apple-touch-icon-precomposed" href="/static/sur-ios.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="viewport"
+        content="viewport-fit=contain, user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+
 </head>
 
 <body>
@@ -41,7 +65,7 @@
     <section class='compose'>
         <input placeholder='Press return to send a message.'>
     </section>
-    <script src='./chat.js'></script>
+    <script src='/static/chat.js'></script>
 </body>
 
 </html>

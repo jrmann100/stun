@@ -1,3 +1,7 @@
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/static/serviceWorker.js');
+};
+
 const elements = {
     me: document.querySelector('.me'),
     dial: document.querySelector('section.connect input[type=\'button\']'),
@@ -10,12 +14,12 @@ const elements = {
 const main = async () => {
     const conn = new RTCPeerConnection({
         'iceServers': [{
-            'urls': 'stun:stun.l.google.com:19302'
+            'urls': `stun:${location.hostname}:3478`
+            // 'urls': 'stun:stun.l.google.com:19302'
         }]
     });
 
-    // is this hostname okay?
-    const server = new WebSocket(`ws://${location.hostname}:8765`);
+    const server = new WebSocket(`ws://${location.host}/ws`);
 
     window.server = server; // DEBUG
     window.conn = conn; // DEBUG
@@ -78,7 +82,6 @@ const main = async () => {
         get: function () { return this._c; },
         set: function (chan = this._c) {
             this._c = chan;
-            this._c.addEventListener('message', (ev) => new Bubble(ev.data, Bubble.LEFT));
             this._c.binaryType = "arraybuffer";
             this._c.addEventListener('open', (ev) => new Bubble(`Connected to ${your_id}.`));
             this._c.addEventListener('message', (ev) => new Bubble(ev.data, Bubble.LEFT));
@@ -91,11 +94,11 @@ const main = async () => {
     }
 
 
-    const MyID = class {
-        static _ta = elements.me;
-        static _id = '';
+    const CMyID = class {
+        /*static*/ _ta = elements.me;
+        /*static*/ _id = '';
 
-        static toString() {
+        /*static*/ toString() {
             return this._id;
         }
 
@@ -103,11 +106,11 @@ const main = async () => {
             return this._id;
         }
 
-        static get() {
+        /*static*/ get() {
             return this._id;
         }
 
-        static async set(id = this._ta.textContent) {
+        /*static*/ async set(id = this._ta.textContent) {
             if (!(id === '' || id === this._id)) {
                 try {
                     this._id = (await request('change_id', { 'id': id }))['id'] === id ? id : _id;
@@ -118,7 +121,7 @@ const main = async () => {
             return this._id;
         }
 
-        static async _show() {
+        /*static*/ async _show() {
             if (this._ta.textContent !== this._id) this._ta.textContent = this._id;
             if (this._id.length === 0) {
                 this._ta.contentEditable = 'false';
@@ -128,7 +131,7 @@ const main = async () => {
             return this._id;
         }
 
-        static async init() {
+        /*static*/ async init() {
             this._id = (await request('id'))['id'];
             this._show();
             if (localStorage.getItem('id')) this.set(localStorage.getItem('id'));
@@ -143,8 +146,6 @@ const main = async () => {
             })
         }
     }
-
-    window.my_id = MyID; // DEBUG
 
     window.chan = chan; // DEBUG
 
@@ -174,7 +175,11 @@ const main = async () => {
         }
     }
 
+    MyID = new CMyID(); // Waiting until Safari supports static classes. 
     await MyID.init()
+
+    window.my_id = MyID; // DEBUG
+
     connectState(true);
     server.addEventListener('close', () => {
         connectState(false);
